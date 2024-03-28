@@ -2,7 +2,7 @@
 
 **Все зависимости находятся в requirements.txt, пример необходимых переменных окружений в .env_sample, список уникальных локаций представлен в csv файле "uszips.csv"**
 **Для запуска проекта:**
-- `git clone https://github.com/AliaksandrSihai/rishat_test_task.git`
+- `git clone https://github.com/AliaksandrSihai/look_near_car.git`
 -  Создать файл .env(скопировать из .env_sample пример необходимых переменных)
 ___
   - <br>**Разворачивание без Docker:**
