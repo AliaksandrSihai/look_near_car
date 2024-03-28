@@ -1,0 +1,101 @@
+version: "3"
+services:
+  postgres_db:
+    image: postgres:16
+    container_name: postgres_db
+    restart: on-failure
+    env_file:
+      - .env
+    environment:
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_db:/var/lib/postgresql
+    ports:
+      - '5433:5432'
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-d", "${POSTGRES_DB}", "-U", "${POSTGRES_USER}", "-h", "${POSTGRES_HOST}", "-p", "5432" ]
+      timeout: 30s
+      retries: 3
+    networks:
+      - local
+
+
+  redis:
+    image: redis
+    container_name: redis
+    restart: on-failure
+    ports:
+      - "6380:6379"
+    networks:
+      - local
+
+
+  celery:
+    build: .
+    container_name: celery
+    restart: on-failure
+    tty: true
+    command: celery -A conf worker -l INFO
+    env_file:
+      - .env
+    environment:
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - CELERY_TASK_TRACK_STARTED=${CELERY_TASK_TRACK_STARTED}
+    depends_on:
+      - redis
+      - look_near_car
+    networks:
+      - local
+
+
+  celery_beat:
+    build: .
+    container_name: celery_beat
+    restart: on-failure
+    tty: true
+    command: celery -A conf beat -l INFO
+    depends_on:
+      - redis
+      - celery
+    networks:
+      - local
+
+  look_near_car:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: look_near_car
+    restart: on-failure
+    env_file:
+      - .env
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py csu && python manage.py crl && python manage.py cnr &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/look_near_car/
+    ports:
+      - '8000:8000'
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://127.0.0.1:8000" ]
+      interval: 30s
+      timeout: 30s
+      retries: 5
+    networks:
+      - local
+
+networks:
+  local:
+    driver: bridge
+
+volumes:
+  postgres_db:
+
+
+
+
+
